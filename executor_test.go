@@ -13,7 +13,9 @@ import (
 
 ////////////////////////////////////////////////////////////////////////////////
 
-func testExecutorExecutionRepoError(executor w.Executor, test *testing.T) {
+func testExecutorRepoError(
+	executor w.Executor, author string, test *testing.T) {
+
 	ctrl := gomock.NewController(test)
 	defer ctrl.Finish()
 
@@ -26,15 +28,12 @@ func testExecutorExecutionRepoError(executor w.Executor, test *testing.T) {
 			Account: w.AccountID{ID: "qwerty", Currency: "RUB"}, Volume: 3}}
 	firstRequest := w.AccountID{ID: "qwerty", Currency: "USD"}
 
-	repo := mw.NewMockAccountRepo(ctrl)
-	repo.EXPECT().Modify(w.GetTransAccounts(trans), gomock.Any()).Do(
-		func(
-			_ map[w.AccountID]interface{},
-			f func(repoTrans w.AccountRepoTrans) error) {
-
+	repo := mw.NewMockRepo(ctrl)
+	repo.EXPECT().Modify(trans, author, gomock.Any()).Do(
+		func(_ w.Trans, _ string, f func(repoTrans w.RepoTrans) error) {
 			secondRequest := w.AccountID{ID: "qwerty", Currency: "EUR"}
 			// Second account retrieving attempt ends with a  predefined error.
-			repoTrans := mw.NewMockAccountRepoTrans(ctrl)
+			repoTrans := mw.NewMockRepoTrans(ctrl)
 			repoTrans.EXPECT().
 				GetAccount(secondRequest).Return(nil, errors.New("Test error 1")).
 				After(repoTrans.EXPECT().GetAccount(firstRequest).
@@ -58,9 +57,9 @@ func testExecutorExecutionRepoError(executor w.Executor, test *testing.T) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// Test_Executor_Manager_Execute_Success tests successful transaction execution
-// by the manager.
-func Test_Executor_Manager_Execute_Success(test *testing.T) {
+// Test_Executor_Manager_Success tests successful transaction execution by the
+// manager.
+func Test_Executor_Manager_Success(test *testing.T) {
 	ctrl := gomock.NewController(test)
 	defer ctrl.Finish()
 
@@ -72,13 +71,10 @@ func Test_Executor_Manager_Execute_Success(test *testing.T) {
 		w.BalanceAction{
 			Account: w.AccountID{ID: "-50", Currency: "RUB"}, Volume: 100}}
 
-	repo := mw.NewMockAccountRepo(ctrl)
-	repo.EXPECT().Modify(w.GetTransAccounts(trans), gomock.Any()).Do(
-		func(
-			_ map[w.AccountID]interface{},
-			f func(repoTrans w.AccountRepoTrans) error) {
-
-			repoTrans := mw.NewMockAccountRepoTrans(ctrl)
+	repo := mw.NewMockRepo(ctrl)
+	repo.EXPECT().Modify(trans, "manager", gomock.Any()).Do(
+		func(_ w.Trans, _ string, f func(repoTrans w.RepoTrans) error) {
+			repoTrans := mw.NewMockRepoTrans(ctrl)
 			for _, action := range trans {
 				balance, err := strconv.ParseFloat(action.Account.ID, 64)
 				if err != nil {
@@ -125,19 +121,18 @@ func Test_Executor_Manager_Execute_Success(test *testing.T) {
 
 }
 
-// Test_Executor_Manager_Execute_Error tests repository error handling while
+// Test_Executor_Manager_RepoError tests repository error handling while
 // transaction execution by the manager.
-func Test_Executor_Manager_Execute_RepoError(test *testing.T) {
+func Test_Executor_Manager_RepoError(test *testing.T) {
 	executor := w.CreateManagerExecutor()
 	defer executor.Close()
-	testExecutorExecutionRepoError(executor, test)
+	testExecutorRepoError(executor, "manager", test)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// Test_Executor_Client_Execute_Success tests normal transaction execution by
-// client.
-func Test_Executor_Client_Execute_Success(test *testing.T) {
+// Test_Executor_Client_Success tests normal transaction execution by client.
+func Test_Executor_Client_Success(test *testing.T) {
 	ctrl := gomock.NewController(test)
 	defer ctrl.Finish()
 
@@ -155,13 +150,10 @@ func Test_Executor_Client_Execute_Success(test *testing.T) {
 		w.BalanceAction{
 			Account: w.AccountID{ID: "0", Currency: "RUB"}, Volume: 0}}
 
-	repo := mw.NewMockAccountRepo(ctrl)
-	repo.EXPECT().Modify(w.GetTransAccounts(trans), gomock.Any()).Do(
-		func(
-			_ map[w.AccountID]interface{},
-			f func(repoTrans w.AccountRepoTrans) error) {
-
-			repoTrans := mw.NewMockAccountRepoTrans(ctrl)
+	repo := mw.NewMockRepo(ctrl)
+	repo.EXPECT().Modify(trans, "client", gomock.Any()).Do(
+		func(_ w.Trans, _ string, f func(repoTrans w.RepoTrans) error) {
+			repoTrans := mw.NewMockRepoTrans(ctrl)
 			for _, action := range trans {
 				balance, err := strconv.ParseFloat(action.Account.ID, 64)
 				if err != nil {
@@ -219,9 +211,9 @@ func Test_Executor_Client_Execute_Success(test *testing.T) {
 
 }
 
-// Test_Executor_Client_Execute_DoesNotHaveEnoughFundsError tests "account does
-// not have enough funds" error handling while transaction execution by client.
-func Test_Executor_Client_Execute_DoesNotHaveEnoughFundsError(test *testing.T) {
+// Test_Executor_Client_DoesNotHaveEnoughFundsError tests "account does not have
+// enough funds" error handling while transaction execution by client.
+func Test_Executor_Client_DoesNotHaveEnoughFundsError(test *testing.T) {
 	ctrl := gomock.NewController(test)
 	defer ctrl.Finish()
 
@@ -248,13 +240,12 @@ func Test_Executor_Client_Execute_DoesNotHaveEnoughFundsError(test *testing.T) {
 			errorAccount = action.Account
 		}
 
-		repo := mw.NewMockAccountRepo(ctrl)
-		repo.EXPECT().Modify(w.GetTransAccounts(trans), gomock.Any()).DoAndReturn(
+		repo := mw.NewMockRepo(ctrl)
+		repo.EXPECT().Modify(trans, "client", gomock.Any()).DoAndReturn(
 			func(
-				_ map[w.AccountID]interface{},
-				f func(repoTrans w.AccountRepoTrans) error) error {
+				_ w.Trans, _ string, f func(repoTrans w.RepoTrans) error) error {
 
-				repoTrans := mw.NewMockAccountRepoTrans(ctrl)
+				repoTrans := mw.NewMockRepoTrans(ctrl)
 				for _, action := range trans {
 					balance, err := strconv.ParseFloat(action.Account.ID, 64)
 					if err != nil {
@@ -285,12 +276,12 @@ func Test_Executor_Client_Execute_DoesNotHaveEnoughFundsError(test *testing.T) {
 	}
 }
 
-// Test_Executor_Client_Execute_Error tests repository error handling while
-// transaction execution by client.
-func Test_Executor_Client_Execute_RepoError(test *testing.T) {
+// Test_Executor_Client_Error tests repository error handling while transaction
+// execution by client.
+func Test_Executor_Client_RepoError(test *testing.T) {
 	executor := w.CreateClientExecutor()
 	defer executor.Close()
-	testExecutorExecutionRepoError(executor, test)
+	testExecutorRepoError(executor, "client", test)
 }
 
 ////////////////////////////////////////////////////////////////////////////////

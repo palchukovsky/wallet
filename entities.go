@@ -21,12 +21,3 @@ type BalanceAction struct {
 // Trans is a bussiness transaction, an atomic set of balance modifications for
 // various accounts.
 type Trans = []BalanceAction
-
-// GetTransAccounts returns all accounts of the transaction as the list.
-func GetTransAccounts(trans Trans) map[AccountID]interface{} {
-	result := map[AccountID]interface{}{}
-	for _, account := range trans {
-		result[account.Account] = nil
-	}
-	return result
-}
