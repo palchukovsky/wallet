@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -18,15 +19,22 @@ type Executor interface {
 type clientExecutor struct{}
 
 // CreateClientExecutor creates executor with policy for normal client. The
-// client policy does not allow to decrease account balance to the negative
-// value but allows to add funds, even if the final result still is negative.
-// It also does not allow to execute a transaction with various currencies in
-// the action list - currency must be only one.
+// policy allows to move funds only from one account to another. The policy does
+// not allow to decrease account balance to the negative value but allows to add
+// funds, even if the final result still is negative. It also does not allow to
+// execute a transaction with various currencies in the action list - currency
+// must be only one.
 func CreateClientExecutor() Executor { return &clientExecutor{} }
 
 func (e clientExecutor) Close() {}
 
 func (e *clientExecutor) Execute(trans Trans, repo Repo) ([]Account, error) {
+	if len(trans) != 2 {
+		return nil,
+			errors.New(
+				"The transaction is not a transaction" +
+					" to move funds from one account to another")
+	}
 	var result []Account
 	return result,
 		repo.Modify(trans, "client",
@@ -41,15 +49,28 @@ func (*clientExecutor) execTrans(
 	transData Trans, repoTrans RepoTrans) ([]Account, error) {
 
 	result := []Account{}
-	var currency *string
-	for _, action := range transData {
+	for i, action := range transData {
 
-		if currency == nil {
-			currency = &action.Account.Currency
-		} else if *currency != action.Account.Currency {
-			return nil,
-				fmt.Errorf(`Account "%s" (%s) has a different currency from "%s"`,
-					action.Account.ID, action.Account.Currency, *currency)
+		if i > 0 {
+			prevTrans := transData[i-1]
+			if prevTrans.Account == action.Account {
+				return nil,
+					fmt.Errorf(`Transaction has only one account "%s" (%s)`,
+						action.Account.ID, action.Account.Currency)
+			}
+			if prevTrans.Account.Currency != action.Account.Currency {
+				return nil,
+					fmt.Errorf(`Account "%s" (%s) has a different currency from "%s"`,
+						action.Account.ID, action.Account.Currency,
+						prevTrans.Account.Currency)
+			}
+			if (prevTrans.Volume < 0) == (action.Volume < 0) ||
+				prevTrans.Volume != action.Volume*-1 {
+
+				return nil,
+					errors.New("Transaction does not move" +
+						" the same volume of funds for each account")
+			}
 		}
 
 		account, err := repoTrans.GetAccount(action.Account)
