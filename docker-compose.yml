@@ -3,7 +3,7 @@ version: "3.7"
 services:
   
   db:
-    image: palchukovsky/wallet/db
+    image: palchukovsky/wallet.db
     restart: always
     environment:
       POSTGRES_USER: wallet
@@ -20,7 +20,7 @@ services:
       - 8080:8080
 
   rest:
-    image: palchukovsky/wallet/rest
+    image: palchukovsky/wallet.rest
     restart: always
     command: -db_name wallet -db_login wallet -db_password WaLlEtSeCrEtPaSsWoRd4 -db_host db -port 8080
     depends_on:
