@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	host     = flag.String("url", "localhost:80", "service host and port")
+	host     = flag.String("host", "localhost:80", "service host and port")
 	id       = flag.String("id", "", "new account ID")
 	currency = flag.String("currency", "USD", "new account currency")
 )

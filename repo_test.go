@@ -412,3 +412,65 @@ func Test_Repo_Modify_BeginError(test *testing.T) {
 	}
 
 }
+
+// Test_Repo_Modify_Lists tests repository lists requests.
+func Test_Repo_Modify_Lists(test *testing.T) {
+	ctrl := gomock.NewController(test)
+	defer ctrl.Finish()
+
+	db := mw.NewMockDB(ctrl)
+	accounts := []w.Account{
+		{ID: w.AccountID{ID: "123", Currency: "345"},
+			Balance: 456.678},
+		{ID: w.AccountID{ID: "678", Currency: "098"},
+			Balance: 123.123}}
+	transList := []w.Trans{
+		{
+			{Account: w.AccountID{ID: "123", Currency: "345"},
+				Volume: 456.678},
+			{Account: w.AccountID{ID: "678", Currency: "098"},
+				Volume: 123.123}},
+		{
+			{Account: w.AccountID{ID: "1231", Currency: "3451"},
+				Volume: 456.678},
+			{Account: w.AccountID{ID: "6781", Currency: "0981"},
+				Volume: 123.123}}}
+	errText := "Test error"
+	db.EXPECT().GetAccounts().Return(accounts, errors.New(errText))
+	db.EXPECT().GetTransList().Return(transList, errors.New(errText))
+
+	repo := w.CreateRepo(db)
+
+	{
+		result, err := repo.GetAccounts()
+		if len(accounts) != len(result) {
+			test.Errorf("Wrong result: %v.", result)
+		} else {
+			for i, account := range result {
+				if account != accounts[i] {
+					test.Errorf("Wrong result: %v.", result)
+				}
+			}
+		}
+		if err == nil || err.Error() != errText {
+			test.Errorf("Wrong error: %v.", err)
+		}
+	}
+	{
+		result, err := repo.GetTransList()
+		if len(transList) != len(result) {
+			test.Errorf("Wrong result: %v.", result)
+		} else {
+			for i, trans := range result {
+				for j, action := range trans {
+					if action != transList[i][j] {
+						test.Errorf("Wrong result: %v.", result)
+					}
+				}
+			}
+		}
+		if err == nil || err.Error() != errText {
+			test.Errorf("Wrong error: %v.", err)
+		}
+	}
+}

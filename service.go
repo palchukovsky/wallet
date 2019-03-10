@@ -1,5 +1,7 @@
 package wallet
 
+import "log"
+
 // Service describes the interface to access to the wallets service to request
 // data and process payments.
 type Service interface {
@@ -37,11 +39,21 @@ func CreateService(
 func (s *service) Close() {}
 
 func (s *service) GetPayments() []Trans {
-	return []Trans{}
+	result, err := s.repo.GetTransList()
+	if err != nil {
+		log.Printf(`Failed to query transaction list: "%s".`, err)
+		return []Trans{}
+	}
+	return result
 }
 
 func (s *service) GetAccounts() []Account {
-	return []Account{}
+	result, err := s.repo.GetAccounts()
+	if err != nil {
+		log.Printf(`Failed to query account list: "%s".`, err)
+		return []Account{}
+	}
+	return result
 }
 
 func (s *service) CreateAccount(id AccountID) error {

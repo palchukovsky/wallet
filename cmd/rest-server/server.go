@@ -56,100 +56,112 @@ func (s *server) close() {
 }
 
 func (s *server) handleAccountRequest(
-	response http.ResponseWriter,
-	request *http.Request) {
+	resp http.ResponseWriter, req *http.Request) {
 
-	switch request.Method {
+	switch req.Method {
 	case "POST":
-		log.Printf(`Creating new account...`)
-		err := s.service.CreateAccount(wallet.AccountID{
-			ID: request.FormValue("id"), Currency: request.FormValue("currency")})
-		if err != nil {
-			log.Printf(`Failed to create account: "%s". Request: %v.`, err, *request)
-			response.WriteHeader(http.StatusInternalServerError)
-			response.Write([]byte("Failed to create account"))
-			break
-		}
-		response.WriteHeader(http.StatusCreated)
-		log.Println(`New account created.`)
-
+		s.createAccount(resp, req)
 	case "PUT":
-		log.Println(`Updating account...`)
-		action := wallet.BalanceAction{Account: wallet.AccountID{
-			ID: request.FormValue("id"), Currency: request.FormValue("currency")}}
-		var err error
-		action.Volume, err = strconv.ParseFloat(request.FormValue("amount"), 64)
-		if err != nil {
-			log.Printf(`Failed to parse account setup amount: "%s". Request: %v.`,
-				err, request.FormValue("amount"))
-			response.WriteHeader(http.StatusBadRequest)
-			response.Write([]byte("Failed to parse account setup amount"))
-			break
-		}
-		if err := s.service.SetupAccount(action); err != nil {
-			log.Printf(`Failed to setup account: "%s". Request: %v.`, err, *request)
-			response.WriteHeader(http.StatusInternalServerError)
-			response.Write([]byte("Failed to setup account"))
-			break
-		}
-		response.WriteHeader(http.StatusOK)
-		log.Println(`Account updated.`)
-
+		s.UpdateAccount(resp, req)
 	case "GET":
-		log.Println(`Account list requested...`)
-		response.Write(s.protocol.SerializeAccounts(s.service.GetAccounts()))
-		response.Header().Set("Content-Type", s.protocol.GetContentType())
-		response.WriteHeader(http.StatusOK)
-
+		s.sendAccountList(resp, req)
 	default:
-		log.Printf(`Requested unknown methods "%s" for account.`, request.Method)
-		response.WriteHeader(http.StatusNotFound)
-		response.Write([]byte("Unknown method"))
-
+		log.Printf(`Requested unknown methods "%s" for account.`, req.Method)
+		resp.WriteHeader(http.StatusNotFound)
+		resp.Write([]byte("Unknown method"))
 	}
 }
 
-func (s *server) handlePaymentRequest(
-	response http.ResponseWriter,
-	request *http.Request) {
-
-	switch request.Method {
-	case "POST":
-		log.Println(`Processing payment...`)
-		currency := request.FormValue("currency")
-		amount, err := strconv.ParseFloat(request.FormValue("amount"), 64)
-		if err != nil || amount < 0 {
-			log.Printf(`Failed to parse payment amount: "%s". Request: %v.`,
-				err, *request)
-			response.WriteHeader(http.StatusBadRequest)
-			response.Write([]byte("Failed to parse payment amount"))
-			break
-		}
-		src := wallet.BalanceAction{Account: wallet.AccountID{
-			ID: request.FormValue("from_account"), Currency: currency},
-			Volume: -amount}
-		dst := wallet.BalanceAction{Account: wallet.AccountID{
-			ID: request.FormValue("to_account"), Currency: currency},
-			Volume: amount}
-		if err := s.service.MakePayment(src, dst); err != nil {
-			log.Printf(`Failed to make payment: "%s". Request: %v.`, err, *request)
-			response.WriteHeader(http.StatusInternalServerError)
-			response.Write([]byte("Failed to make payment"))
-			break
-		}
-		response.WriteHeader(http.StatusOK)
-		log.Println(`Payment successfully processed.`)
-
-	case "GET":
-		log.Println(`Payment list requested...`)
-		response.Write(s.protocol.SerializeTransList(s.service.GetPayments()))
-		response.Header().Set("Content-Type", s.protocol.GetContentType())
-		response.WriteHeader(http.StatusOK)
-
-	default:
-		log.Printf(`Requested unknown methods "%s" for payment.`, request.Method)
-		response.WriteHeader(http.StatusNotFound)
-		response.Write([]byte("Unknown method"))
-
+func (s *server) createAccount(resp http.ResponseWriter, req *http.Request) {
+	log.Printf(`Creating new account...`)
+	err := s.service.CreateAccount(wallet.AccountID{
+		ID: req.FormValue("id"), Currency: req.FormValue("currency")})
+	if err != nil {
+		log.Printf(`Failed to create account: "%s". Request: %v.`, err, *req)
+		resp.WriteHeader(http.StatusInternalServerError)
+		resp.Write([]byte("Failed to create account"))
+		return
 	}
+	resp.WriteHeader(http.StatusCreated)
+	log.Println(`New account created.`)
+}
+
+func (s *server) UpdateAccount(
+	resp http.ResponseWriter, req *http.Request) {
+
+	log.Println(`Updating account...`)
+	action := wallet.BalanceAction{Account: wallet.AccountID{
+		ID: req.FormValue("id"), Currency: req.FormValue("currency")}}
+	var err error
+	action.Volume, err = strconv.ParseFloat(req.FormValue("amount"), 64)
+	if err != nil {
+		log.Printf(`Failed to parse account setup amount: "%s". Request: %v.`,
+			err, req.FormValue("amount"))
+		resp.WriteHeader(http.StatusBadRequest)
+		resp.Write([]byte("Failed to parse account setup amount"))
+		return
+	}
+	if err := s.service.SetupAccount(action); err != nil {
+		log.Printf(`Failed to setup account: "%s". Request: %v.`, err, *req)
+		resp.WriteHeader(http.StatusInternalServerError)
+		resp.Write([]byte("Failed to setup account"))
+		return
+	}
+	resp.WriteHeader(http.StatusOK)
+	log.Println(`Account updated.`)
+}
+
+func (s *server) sendAccountList(resp http.ResponseWriter, req *http.Request) {
+	log.Println(`Account list requested...`)
+	resp.WriteHeader(http.StatusOK)
+	resp.Write(s.protocol.SerializeAccounts(s.service.GetAccounts()))
+	resp.Header().Set("Content-Type", s.protocol.GetContentType())
+}
+
+func (s *server) handlePaymentRequest(
+	resp http.ResponseWriter, req *http.Request) {
+
+	switch req.Method {
+	case "POST":
+		s.processPayment(resp, req)
+	case "GET":
+		s.sendPaymentList(resp, req)
+	default:
+		log.Printf(`Requested unknown methods "%s" for payment.`, req.Method)
+		resp.WriteHeader(http.StatusNotFound)
+		resp.Write([]byte("Unknown method"))
+	}
+}
+
+func (s *server) processPayment(resp http.ResponseWriter, req *http.Request) {
+	log.Println(`Processing payment...`)
+	currency := req.FormValue("currency")
+	amount, err := strconv.ParseFloat(req.FormValue("amount"), 64)
+	if err != nil || amount < 0 {
+		log.Printf(`Failed to parse payment amount: "%s". Request: %v.`, err, *req)
+		resp.WriteHeader(http.StatusBadRequest)
+		resp.Write([]byte("Failed to parse payment amount"))
+		return
+	}
+	src := wallet.BalanceAction{Account: wallet.AccountID{
+		ID: req.FormValue("from_account"), Currency: currency},
+		Volume: -amount}
+	dst := wallet.BalanceAction{Account: wallet.AccountID{
+		ID: req.FormValue("to_account"), Currency: currency},
+		Volume: amount}
+	if err := s.service.MakePayment(src, dst); err != nil {
+		log.Printf(`Failed to make payment: "%s". Request: %v.`, err, *req)
+		resp.WriteHeader(http.StatusInternalServerError)
+		resp.Write([]byte("Failed to make payment"))
+		return
+	}
+	resp.WriteHeader(http.StatusOK)
+	log.Println(`Payment successfully processed.`)
+}
+
+func (s *server) sendPaymentList(resp http.ResponseWriter, req *http.Request) {
+	log.Println(`Payment list requested...`)
+	resp.WriteHeader(http.StatusOK)
+	resp.Write(s.protocol.SerializeTransList(s.service.GetPayments()))
+	resp.Header().Set("Content-Type", s.protocol.GetContentType())
 }

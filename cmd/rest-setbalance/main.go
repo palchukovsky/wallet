@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	host     = flag.String("url", "localhost:80", "service host and port")
+	host     = flag.String("host", "localhost:80", "service host and port")
 	id       = flag.String("id", "", "account ID")
 	currency = flag.String("currency", "USD", "account currency")
 	amount   = flag.Float64("amount", .0, "transaction amount")

@@ -23,6 +23,10 @@ type Repo interface {
 	// prefetched data and applies changes by a transaction if f has not
 	// returned an error.
 	Modify(trans Trans, author string, f func(tans RepoTrans) error) error
+	// GetAccounts returns full account list.
+	GetAccounts() ([]Account, error)
+	// GetTransList returns full transaction list.
+	GetTransList() ([]Trans, error)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -167,5 +171,9 @@ func (r *repo) Modify(
 	}
 	return dbTrans.commit()
 }
+
+func (r *repo) GetAccounts() ([]Account, error) { return r.db.GetAccounts() }
+
+func (r *repo) GetTransList() ([]Trans, error) { return r.db.GetTransList() }
 
 ////////////////////////////////////////////////////////////////////////////////

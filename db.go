@@ -46,6 +46,11 @@ type DB interface {
 
 	// Begin starts a new database transaction to execute database IO operations.
 	Begin() (DBTrans, error)
+
+	// GetAccounts returns full account list.
+	GetAccounts() ([]Account, error)
+	// GetTransList returns full transaction list.
+	GetTransList() ([]Trans, error)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -154,6 +159,56 @@ func (db *pgDB) Begin() (DBTrans, error) {
 		return nil, err
 	}
 	return &dbTrans{tx: tx}, nil
+}
+
+func (db *pgDB) GetAccounts() ([]Account, error) {
+	rows, err := db.conn.Query(
+		"SELECT name, currency, balance FROM account ORDER BY (name, currency)")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := []Account{}
+	for rows.Next() {
+		account := Account{}
+		err := rows.Scan(&account.ID.ID, &account.ID.Currency, &account.Balance)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, account)
+	}
+	return result, nil
+}
+
+func (db *pgDB) GetTransList() ([]Trans, error) {
+	rows, err := db.conn.Query(
+		"SELECT trans.id, account.name, account.currency, action.volume" +
+			" FROM action" +
+			" LEFT JOIN account ON account.id = account" +
+			" LEFT JOIN trans ON trans.id = trans" +
+			" ORDER BY trans.time")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := []Trans{}
+	var prevTransID *int
+	for rows.Next() {
+		action := BalanceAction{}
+		var transID int
+		err := rows.Scan(
+			&transID, &action.Account.ID, &action.Account.Currency, &action.Volume)
+		if err != nil {
+			return nil, err
+		}
+		if prevTransID == nil || *prevTransID != transID {
+			result = append(result, Trans{action})
+		} else {
+			result[len(result)-1] = append(result[len(result)-1], action)
+		}
+		prevTransID = &transID
+	}
+	return result, nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////

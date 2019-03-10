@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	host        = flag.String("url", "localhost:80", "service host and port")
+	host        = flag.String("host", "localhost:80", "service host and port")
 	fromAccount = flag.String("from_account", "", "source account")
 	toAccount   = flag.String("to_account", "", "destinaction account")
 	currency    = flag.String("currency", "USD", "accounts currency")

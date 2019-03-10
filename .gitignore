@@ -2,3 +2,4 @@
 *.exe
 debug
 debug.test
+/coverage.out
