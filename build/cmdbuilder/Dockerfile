@@ -9,6 +9,8 @@ RUN apk update
 RUN apk add git
 RUN apk add build-base
 
+RUN go get -v github.com/lib/pq
+RUN go get -v github.com/gorilla/mux
 RUN go get -v github.com/golang/mock/gomock
 RUN go get -v github.com/golang/mock/mockgen
 RUN make mock

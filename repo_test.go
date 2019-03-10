@@ -9,8 +9,8 @@ import (
 	mw "github.com/palchukovsky/wallet/mock"
 )
 
-// Test_Repo_StoreAccount tests account storing.
-func Test_Repo_StoreAccount(test *testing.T) {
+// Test_Repo_AddAccount tests new account adding.
+func Test_Repo_AddAccount(test *testing.T) {
 	ctrl := gomock.NewController(test)
 	defer ctrl.Finish()
 
@@ -22,7 +22,7 @@ func Test_Repo_StoreAccount(test *testing.T) {
 		db := mw.NewMockDB(ctrl)
 		db.EXPECT().Begin().Return(nil, errors.New(errText))
 		repo := w.CreateRepo(db)
-		err := repo.StoreAccount(account)
+		err := repo.AddAccount(account)
 		if err == nil || err.Error() != errText {
 			test.Errorf(`Wrong error status: "%v".`, err)
 		}
@@ -32,10 +32,10 @@ func Test_Repo_StoreAccount(test *testing.T) {
 		trans := mw.NewMockDBTrans(ctrl)
 		db := mw.NewMockDB(ctrl)
 		trans.EXPECT().Rollback().
-			After(trans.EXPECT().StoreAccount(account).Return(errors.New(errText)).
+			After(trans.EXPECT().AddAccount(account).Return(errors.New(errText)).
 				After(db.EXPECT().Begin().Return(trans, nil)))
 		repo := w.CreateRepo(db)
-		err := repo.StoreAccount(account)
+		err := repo.AddAccount(account)
 		if err == nil || err.Error() != errText {
 			test.Errorf(`Wrong error status: "%v".`, err)
 		}
@@ -46,10 +46,10 @@ func Test_Repo_StoreAccount(test *testing.T) {
 		db := mw.NewMockDB(ctrl)
 		trans.EXPECT().Rollback().
 			After(trans.EXPECT().Commit().Return(errors.New(errText)).
-				After(trans.EXPECT().StoreAccount(account).Return(nil).
+				After(trans.EXPECT().AddAccount(account).Return(nil).
 					After(db.EXPECT().Begin().Return(trans, nil))))
 		repo := w.CreateRepo(db)
-		err := repo.StoreAccount(account)
+		err := repo.AddAccount(account)
 		if err == nil || err.Error() != errText {
 			test.Errorf(`Wrong error status: "%v".`, err)
 		}
@@ -59,10 +59,10 @@ func Test_Repo_StoreAccount(test *testing.T) {
 		db := mw.NewMockDB(ctrl)
 		trans.EXPECT().Rollback().
 			After(trans.EXPECT().Commit().Return(nil).
-				After(trans.EXPECT().StoreAccount(account).Return(nil).
+				After(trans.EXPECT().AddAccount(account).Return(nil).
 					After(db.EXPECT().Begin().Return(trans, nil))))
 		repo := w.CreateRepo(db)
-		err := repo.StoreAccount(account)
+		err := repo.AddAccount(account)
 		if err != nil {
 			test.Errorf(`Failed to store account: "%s".`, err)
 		}

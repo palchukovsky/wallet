@@ -17,8 +17,8 @@ type RepoTrans interface {
 type Repo interface {
 	// Close closes repository and frees resources.
 	Close()
-	// StoreAccount stores (adds or update existing) account without conditions.
-	StoreAccount(account Account) error
+	// AddAccount adds new account.
+	AddAccount(account Account) error
 	// Modify takes bussiness transaction to prefetch data, then calls f with
 	// prefetched data and applies changes by a transaction if f has not
 	// returned an error.
@@ -136,13 +136,13 @@ func CreateRepo(db DB) Repo { return &repo{db: db} }
 
 func (r *repo) Close() {}
 
-func (r *repo) StoreAccount(account Account) error {
+func (r *repo) AddAccount(account Account) error {
 	trans, err := createRepoTrans(r.db)
 	if err != nil {
 		return err
 	}
 	defer trans.rollback()
-	if err = trans.db.StoreAccount(account); err != nil {
+	if err = trans.db.AddAccount(account); err != nil {
 		return err
 	}
 	return trans.commit()

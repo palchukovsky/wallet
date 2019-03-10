@@ -76,3 +76,5 @@ mock: ## Generate mock interfaces for unit-tests.
 	@$(call get_mock,db,DB)
 	@$(call get_mock,executor,Executor)
 	@$(call get_mock,repo,RepoTrans Repo)
+	@$(call get_mock,service,Service)
+	@$(call get_mock,cmd/rest-server/protocol,Protocol)

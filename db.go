@@ -25,8 +25,8 @@ type DBTrans interface {
 	// QueryAccount returns state of account and account primary key from a
 	// database.
 	QueryAccount(request AccountID, lock bool) (*Account, *int, error)
-	// StoreAccount stores state of account into a database.
-	StoreAccount(account Account) error
+	// AddAccount adds new account.
+	AddAccount(account Account) error
 	// UpdateAccount updates state of account only if it existent.
 	UpdateAccount(account Account, pk int) error
 
@@ -91,10 +91,9 @@ func (t *dbTrans) QueryAccount(
 	return account, &primaryKey, nil
 }
 
-func (t *dbTrans) StoreAccount(account Account) error {
+func (t *dbTrans) AddAccount(account Account) error {
 	_, err := t.tx.Exec(
-		"INSERT INTO account(name, currency, balance) VALUES($1, $2, $3)"+
-			" ON CONFLICT ON CONSTRAINT account_unique DO UPDATE SET balance = $3",
+		"INSERT INTO account(name, currency, balance) VALUES($1, $2, $3)",
 		account.ID.ID, account.ID.Currency, account.Balance)
 	return err
 }
