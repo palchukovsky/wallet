@@ -21,17 +21,17 @@ func testExecutorRepoError(
 
 	trans := []w.BalanceAction{
 		w.BalanceAction{
-			Account: w.AccountID{ID: "qwerty", Currency: "USD"}, Volume: 1},
+			Account: w.AccountID{ID: "qwerty1", Currency: "USD"}, Volume: 1},
 		w.BalanceAction{
-			Account: w.AccountID{ID: "qwerty", Currency: "EUR"}, Volume: 2},
+			Account: w.AccountID{ID: "qwerty2", Currency: "USD"}, Volume: 2},
 		w.BalanceAction{
-			Account: w.AccountID{ID: "qwerty", Currency: "RUB"}, Volume: 3}}
-	firstRequest := w.AccountID{ID: "qwerty", Currency: "USD"}
+			Account: w.AccountID{ID: "qwerty3", Currency: "USD"}, Volume: 3}}
+	firstRequest := w.AccountID{ID: "qwerty1", Currency: "USD"}
 
 	repo := mw.NewMockRepo(ctrl)
 	repo.EXPECT().Modify(trans, author, gomock.Any()).Do(
 		func(_ w.Trans, _ string, f func(repoTrans w.RepoTrans) error) {
-			secondRequest := w.AccountID{ID: "qwerty", Currency: "EUR"}
+			secondRequest := w.AccountID{ID: "qwerty2", Currency: "USD"}
 			// Second account retrieving attempt ends with a  predefined error.
 			repoTrans := mw.NewMockRepoTrans(ctrl)
 			repoTrans.EXPECT().
@@ -140,15 +140,13 @@ func Test_Executor_Client_Success(test *testing.T) {
 		w.BalanceAction{
 			Account: w.AccountID{ID: "0", Currency: "USD"}, Volume: 1},
 		w.BalanceAction{
-			Account: w.AccountID{ID: "1", Currency: "RUB"}, Volume: -1},
+			Account: w.AccountID{ID: "1", Currency: "USD"}, Volume: -1},
 		w.BalanceAction{
-			Account: w.AccountID{ID: "-1", Currency: "EUR"}, Volume: 1},
+			Account: w.AccountID{ID: "-1", Currency: "USD"}, Volume: 1},
 		w.BalanceAction{
-			Account: w.AccountID{ID: "-2", Currency: "EUR"}, Volume: 1},
+			Account: w.AccountID{ID: "-2", Currency: "USD"}, Volume: 1},
 		w.BalanceAction{
-			Account: w.AccountID{ID: "-1", Currency: "RUB"}, Volume: 2},
-		w.BalanceAction{
-			Account: w.AccountID{ID: "0", Currency: "RUB"}, Volume: 0}}
+			Account: w.AccountID{ID: "-3", Currency: "USD"}, Volume: 4}}
 
 	repo := mw.NewMockRepo(ctrl)
 	repo.EXPECT().Modify(trans, "client", gomock.Any()).Do(
@@ -222,17 +220,17 @@ func Test_Executor_Client_DoesNotHaveEnoughFundsError(test *testing.T) {
 			w.BalanceAction{
 				Account: w.AccountID{ID: "1", Currency: "USD"}, Volume: 2},
 			w.BalanceAction{
-				Account: w.AccountID{ID: "1", Currency: "EUR"}, Volume: -2}},
+				Account: w.AccountID{ID: "2", Currency: "USD"}, Volume: -4}},
 		{
 			w.BalanceAction{
 				Account: w.AccountID{ID: "1", Currency: "USD"}, Volume: 2},
 			w.BalanceAction{
-				Account: w.AccountID{ID: "0", Currency: "EUR"}, Volume: -1}},
+				Account: w.AccountID{ID: "0", Currency: "USD"}, Volume: -1}},
 		{
 			w.BalanceAction{
 				Account: w.AccountID{ID: "1", Currency: "USD"}, Volume: 2},
 			w.BalanceAction{
-				Account: w.AccountID{ID: "-1", Currency: "EUR"}, Volume: -1}}}
+				Account: w.AccountID{ID: "-1", Currency: "USD"}, Volume: -1}}}
 
 	for _, trans := range transList {
 		var errorAccount w.AccountID
