@@ -8,6 +8,10 @@ Abstract wallet service example with REST-access. It covers the next stories:
 - I want to modify account balance as the manager, without an account balance control
 - I want to communicate with the service by REST
 
+## REST API
+
+REST API described in [docs/api.md](https://github.com/palchukovsky/wallet/blob/master/docs/api.md).
+
 ## Components
 
 ### cmd/rest-server
